@@ -105,10 +105,11 @@ def calculate_specificity(in_param:typing.Tuple[typing.Tuple, typing.Mapping[str
     for in_arg, to_arg in chain(zip(args, to_params), keyword_argument_in_to_pair):
         if to_arg == None: continue #TODO: check if func is vararg here
         # If there is no annotation we can skip
-        if to_arg.annotation is inspect._empty:
-            continue
+        annotation = to_arg.annotation
+        if annotation is inspect._empty:
+            annotation = object
 
-        r = calc_type(type(in_arg), to_arg.annotation, in_arg)      
+        r = calc_type(type(in_arg), annotation, in_arg)      
         if r is None: return None
         else: specificity += r  
 
