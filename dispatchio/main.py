@@ -7,7 +7,7 @@ import numbers
 from collections.abc import Mapping, Sequence, Iterable
 import typing
 from typing import Any, DefaultDict, FrozenSet, Literal, NamedTuple, Tuple, Sequence, Union, List, get_args, get_origin, TypeVar
-from operator import indexOf, itemgetter, sub
+from operator import indexOf, itemgetter, pos, sub
 from warnings import warn
 from dataclasses import dataclass
 
@@ -21,10 +21,33 @@ hard_coded_ABC_spec= {
     Iterable: 2
 }
 
-def conforms_to_sig_names(in_param:typing.Tuple[typing.Tuple, typing.Mapping[str, Any]], to_params:List[Parameter]):
+def conforms_to_sig_names(in_param:typing.Tuple[typing.Tuple, typing.Mapping[str, Any]], to_params:List[Parameter], is_varg, is_kwarg):
     args, kwargs = in_param
-    has_to_be_keyword_params = set(x.name for x in to_params[len(args):] if x.default is inspect._empty)
-    return has_to_be_keyword_params.issubset(set(kwargs.keys()))
+
+    positional_only = sum(1 for x in to_params if x.kind == Parameter.POSITIONAL_ONLY)
+    if len(args)<positional_only:
+        return False
+
+    keyword_accessed = None
+
+    if not is_varg:
+        keyword_accessed = to_params[len(args):]
+    else:
+        raise Exception("No varargs support")
+
+    if any(True for x in to_params[:len(args)] if x.kind is Parameter.KEYWORD_ONLY):
+        return False
+
+    if any(True for x in keyword_accessed if x.kind is Parameter.POSITIONAL_ONLY):
+        return False
+
+    has_to_be_keyword_params = set(x.name for x in keyword_accessed if x.default is inspect._empty)
+    keyword_match =  has_to_be_keyword_params.issubset(set(kwargs.keys()))
+    if not is_kwarg:
+        keyword_match &= set(kwargs.keys()).issubset(set(x.name for x in keyword_accessed))
+
+    return keyword_match
+
 
 def calculate_specificity(in_param:typing.Tuple[typing.Tuple, typing.Mapping[str, Any]], to_params:List[Parameter]):
     specificity = 0
@@ -142,7 +165,7 @@ def dispatchio(func):
         possible_funcs = min_funcs.intersection(max_funcs)
 
         # Are all keyword names included
-        possible_funcs = [f for f in possible_funcs if conforms_to_sig_names((args, kwargs), f[0])]
+        possible_funcs = [f for f in possible_funcs if conforms_to_sig_names((args, kwargs), f[0], f[2], f[3])]
         specificities = [(f,calculate_specificity((args, kwargs), f[0])) for f in possible_funcs]
         specificities = [s for s in specificities if s[1] is not None]
         result = list(sorted(specificities, key=itemgetter(1)))
@@ -156,7 +179,10 @@ def dispatchio(func):
         non_var_parameters = [par for par in sig if par.kind in [Parameter.KEYWORD_ONLY, Parameter.POSITIONAL_OR_KEYWORD, Parameter.POSITIONAL_ONLY]]
         nr_of_arguments = len(non_var_parameters)
 
-        contains_var_parameters = True if len(sig)-len(non_var_parameters)>0 else False
+        
+        contains_args = any(True for par in sig if par.kind is Parameter.VAR_POSITIONAL)
+        contains_kwargs = any(True for par in sig if par.kind is Parameter.VAR_KEYWORD)
+        contains_var_parameters = contains_args or contains_kwargs
 
         mandatory_params = [par for par in non_var_parameters if par.default is inspect._empty]
         nr_of_mandatory_args = len(mandatory_params)
@@ -167,7 +193,7 @@ def dispatchio(func):
         for param in non_var_parameters:
             # Remove default parameter to make parameter type hashable. TODO: make this less hackey
             param._default = None if param.default is not inspect._empty else inspect._empty
-        s = (tuple(non_var_parameters),func2)
+        s = (tuple(non_var_parameters),func2, contains_args, contains_kwargs)
         mapping.min[nr_of_mandatory_args].add(s)
         mapping.max[nr_of_arguments if not contains_var_parameters else -1].add(s)
         mapping.max_seen = nr_of_arguments if nr_of_arguments > mapping.max_seen else mapping.max_seen
