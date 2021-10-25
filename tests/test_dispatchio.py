@@ -6,7 +6,7 @@ import pytest
 
 
 @dispatchio
-def func_test(a:int, b:float, c=None, *args, **kwargs): return 1
+def func_test(a:int, b:float, c=None, **kwargs): return 1
 
 @func_test.register
 def _(a: float, g:float): return 2
@@ -17,6 +17,9 @@ def _(a: Number, g:Number): return 3
 @func_test.register
 def _(a: Iterable[Number]): return 4
 
+@func_test.register
+def _(b: Iterable): return 5
+
 
 def test_1():
     assert(func_test(1,1.0) == 1)
@@ -24,7 +27,11 @@ def test_1():
 
 def test_4():
     assert(func_test([10,10,10]) == 4)
-    assert(func_test([None,10,10]) == 4)
+    with pytest.raises(Exception):
+        assert(func_test([None,10,10]) == 4)
+
+def test_5():
+    assert(func_test(list())==5)
     
 
 print(func_test(1, 1.0))

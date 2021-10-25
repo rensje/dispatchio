@@ -71,9 +71,12 @@ def calculate_specificity(in_param:typing.Tuple[typing.Tuple, typing.Mapping[str
             
         if is_sub:          
 
+            # 0 here so that typed generics are most specific than their untyped generics
             specificity = 0
 
             if subscript:
+                # -2 here so that typed generics are most specific than their untyped generics
+                specificity = -2
                 if b is Union:
                     sp = tuple(calc_type(a,b) for b in subscript)
                     if all( x is None for x in sp):
@@ -89,12 +92,19 @@ def calculate_specificity(in_param:typing.Tuple[typing.Tuple, typing.Mapping[str
                     else:
                         specificity += sum(sp)+hard_coded_ABC_spec[Mapping]
                 elif issubclass(b, Iterable):
-                    el = next(iter(obj))
-                    sp = calc_type(type(el), subscript[0], el)
-                    if sp is None:
-                        return None
-                    else:
-                        specificity += sp
+                    el = None
+                    try:
+                        el = next(iter(obj))
+                        sp = calc_type(type(el), subscript[0], el)
+                        if sp is None:
+                            return None
+                        else:
+                            specificity += sp
+
+                    # Putting in empty list is very unspecific
+                    except StopIteration:
+                        specificity+=11
+                    
 
                 else:
                     warn(f"{b}, {subscript} not yet supported")
@@ -171,6 +181,8 @@ def dispatchio(func):
         result = list(sorted(specificities, key=itemgetter(1)))
         if len(result)==0:
             raise Exception("No method found")
+        if len(result)>1 and result[0][1] == result[1][1]:
+            raise Exception(f"multiple method with same specificity {result[0][0][1], result[1][0][1]}", )
         return result[0][0][1](*args, **kwargs)
 
     def register(func2):
