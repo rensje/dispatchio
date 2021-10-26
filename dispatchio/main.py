@@ -68,15 +68,14 @@ def calculate_specificity(in_param:typing.Tuple[typing.Tuple, typing.Mapping[str
             is_sub = True # True for now, we check the subscripts later
         else:
             is_sub = issubclass(a,b)
-            
+
         if is_sub:          
 
-            # 0 here so that typed generics are most specific than their untyped generics
             specificity = 0
-
+            
             if subscript:
-                # -2 here so that typed generics are most specific than their untyped generics
-                specificity = -2
+                # -5 here so that typed generics are most specific than their untyped generics
+                specificity = -10
                 if b is Union:
                     sp = tuple(calc_type(a,b) for b in subscript)
                     if all( x is None for x in sp):
@@ -103,7 +102,7 @@ def calculate_specificity(in_param:typing.Tuple[typing.Tuple, typing.Mapping[str
 
                     # Putting in empty list is very unspecific
                     except StopIteration:
-                        specificity+=11
+                        return None
                     
 
                 else:
