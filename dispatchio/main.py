@@ -25,7 +25,11 @@ def conforms_to_sig_names(in_param:typing.Tuple[typing.Tuple, typing.Mapping[str
     args, kwargs = in_param
 
     positional_only = sum(1 for x in to_params if x.kind == Parameter.POSITIONAL_ONLY)
+    positional_or_keyword = sum(1 for x in to_params if x.kind == Parameter.POSITIONAL_OR_KEYWORD)
     if len(args)<positional_only:
+        return False
+
+    if len(args)>positional_only+positional_or_keyword:
         return False
 
     keyword_accessed = None
@@ -138,8 +142,10 @@ def calculate_specificity(in_param:typing.Tuple[typing.Tuple, typing.Mapping[str
         annotation = None
         if to_arg == None:
             annotation = object
-        # If there is no annotation we can skip
-        annotation = to_arg.annotation
+        else:
+            # If there is no annotation we can skip
+            annotation = to_arg.annotation
+        
         if annotation is inspect._empty:
             annotation = object
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dispatchio"
-version = "0.1.12"
+version = "0.1.13"
 description = ""
 authors = ["Rens van Dijk <rensvandijk2@gmail.com>"]
 

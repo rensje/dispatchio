@@ -12,6 +12,10 @@ def func_test(a:int, b:float, c=None, **kwargs): return 1
 def _(a: float, g:float): return 2
 
 @func_test.register
+def _(a: Number, **kwargs): return 6
+
+
+@func_test.register
 def _(a: Number, g:Number): return 3
 
 @func_test.register
@@ -33,5 +37,8 @@ def test_4():
 def test_5():
     assert(func_test(list())==5)
     
+def test_6():
+    assert(func_test(1)==6)
 
-print(func_test(1, 1.0))
+def test_7():
+    assert(func_test(2,1)==3)
