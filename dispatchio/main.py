@@ -135,7 +135,9 @@ def calculate_specificity(in_param:typing.Tuple[typing.Tuple, typing.Mapping[str
 
     # loop over all incoming parameters to the outgoing
     for in_arg, to_arg in chain(zip(args, to_params), keyword_argument_in_to_pair):
-        if to_arg == None: continue #TODO: check if func is vararg here
+        annotation = None
+        if to_arg == None:
+            annotation = object
         # If there is no annotation we can skip
         annotation = to_arg.annotation
         if annotation is inspect._empty:
